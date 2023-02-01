@@ -1,43 +1,49 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using VacationRental.Api.Models;
+using VacationRental.Domain.Interfaces;
+using VacationRental.Entities.Entities;
 
 namespace VacationRental.Api.Controllers
 {
     [Route("api/v1/rentals")]
     [ApiController]
-    public class RentalsController : ControllerBase
+    public class RentalsController : BasePublicController
     {
-        private readonly IDictionary<int, RentalViewModel> _rentals;
-
-        public RentalsController(IDictionary<int, RentalViewModel> rentals)
+        private readonly IRentalsService _rentalsService;
+        public RentalsController(IRentalsService rentalsService, IMapper mapper) : base(mapper)
         {
-            _rentals = rentals;
+            _rentalsService = rentalsService;
         }
 
         [HttpGet]
         [Route("{rentalId:int}")]
-        public RentalViewModel Get(int rentalId)
+        public IActionResult Get(int rentalId)
         {
-            if (!_rentals.ContainsKey(rentalId))
-                throw new ApplicationException("Rental not found");
+            var result = _rentalsService.GetRental(rentalId);
 
-            return _rentals[rentalId];
+            return CreateResponse<Rental, RentalViewModel>(result);
         }
 
         [HttpPost]
-        public ResourceIdViewModel Post(RentalBindingModel model)
+        public IActionResult Post(RentalBindingModel model)
         {
-            var key = new ResourceIdViewModel { Id = _rentals.Keys.Count + 1 };
+            var rental = Mapper.Map<Rental>(model);
+            
+            var result = _rentalsService.CreateRental(rental);
 
-            _rentals.Add(key.Id, new RentalViewModel
-            {
-                Id = key.Id,
-                Units = model.Units
-            });
+            return CreateResponse<int, ResourceIdViewModel>(result);
+        }
+        
+        [HttpPut]
+        [Route("{rentalId:int}")]
+        public IActionResult Put(int rentalId, RentalBindingModel model)
+        {
+            var rental = Mapper.Map<Rental>(model);
+            
+            var result = _rentalsService.UpdateRental(rentalId, rental);
 
-            return key;
+            return CreateResponse<int, ResourceIdViewModel>(result);
         }
     }
 }
